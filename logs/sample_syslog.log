@@ -1,0 +1,16 @@
+Jun 16 09:00:01 webserver01 systemd[1]: Started Daily apt download activities.
+Jun 16 09:00:02 webserver01 CRON[982]: (root) CMD (test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily ))
+Jun 16 09:15:33 webserver01 kernel: [12345.678901] eth0: link up, 1000 Mbps, full duplex
+Jun 16 09:20:10 webserver01 systemd[1]: Starting Clean php session files...
+Jun 16 09:20:11 webserver01 systemd[1]: Finished Clean php session files.
+Jun 16 09:45:02 webserver01 dhclient[512]: DHCPREQUEST on eth0 to 192.168.1.1
+Jun 16 09:45:03 webserver01 dhclient[512]: DHCPACK from 192.168.1.1
+Jun 16 10:00:00 webserver01 systemd[1]: Starting Daily man-db regeneration...
+Jun 16 10:05:44 webserver01 kernel: [13012.221004] TCP: Possible SYN flooding detected on port 443
+Jun 16 10:30:00 webserver01 nginx[2201]: worker process 2202 started
+Jun 16 10:47:19 webserver01 systemd[1]: Reloading.
+Jun 16 11:00:00 webserver01 CRON[1601]: (www-data) CMD (php /var/www/html/cron.php)
+Jun 16 11:12:03 webserver01 smartd[615]: Device: /dev/sda, Attribute 190 Airflow_Temperature_Cel changed
+Jun 16 11:40:00 webserver01 systemd[1]: Starting Rotate log files...
+Jun 16 11:40:01 webserver01 systemd[1]: Finished Rotate log files.
+Jun 16 12:00:00 webserver01 anacron[1700]: Job cron.weekly terminated

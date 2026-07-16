@@ -1,0 +1,20 @@
+# Virtual environment
+mark1/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment variables / secrets
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# pytest cache
+.pytest_cache/

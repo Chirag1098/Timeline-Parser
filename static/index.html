@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Timeline Parser — Mark I</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --void: #0A0D12;
+      --panel: #141920;
+      --panel-raised: #1B222C;
+      --line: #262D3A;
+      --ink: #E7EBF0;
+      --dim: #7A8699;
+      --signal: #FFB454;
+      --signal-text: #1A1006;
+      --sev-fail: #F0554A;
+      --sev-success: #5FBF8D;
+      --sev-priv: #C792EA;
+      --sev-neutral: #7A8699;
+      --font-display: 'IBM Plex Sans', sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+      --radius: 4px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse at top, rgba(255,180,84,0.06), transparent 55%),
+        var(--void);
+      color: var(--ink);
+      font-family: var(--font-display);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Masthead ─────────────────────────────────────────────────────── */
+    .masthead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--line);
+    }
+    .masthead-wordmark { display: flex; align-items: baseline; gap: 10px; }
+    .wordmark-title { font-size: 18px; font-weight: 700; letter-spacing: 0.06em; }
+    .wordmark-mark {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--void);
+      background: var(--signal);
+      padding: 2px 6px;
+      border-radius: 2px;
+      letter-spacing: 0.05em;
+    }
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: 0.05em;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
+    .status-dot.status-ok { background: var(--sev-success); box-shadow: 0 0 8px rgba(95,191,141,0.7); }
+    .status-dot.status-down { background: var(--sev-fail); box-shadow: 0 0 8px rgba(240,85,74,0.7); }
+
+    /* ── Console ──────────────────────────────────────────────────────── */
+    .console { max-width: 900px; margin: 0 auto; padding: 48px 32px 80px; }
+    .console-eyebrow { font-size: 13px; color: var(--dim); letter-spacing: 0.03em; margin: 0 0 20px; }
+
+    .query-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 20px;
+      align-items: end;
+    }
+    .field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 220px; }
+    .field-narrow { flex: 1 1 160px; }
+    .field label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--dim);
+    }
+    .field input, .field select {
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      padding: 10px 12px;
+    }
+    .field select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--dim) 50%),
+        linear-gradient(135deg, var(--dim) 50%, transparent 50%);
+      background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 13px) calc(50% - 3px);
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+      padding-right: 32px;
+    }
+    .field input::placeholder { color: #4A5568; }
+    .field input:focus-visible, .field select:focus-visible {
+      outline: 2px solid var(--signal);
+      outline-offset: 1px;
+    }
+
+    .btn-investigate {
+      background: var(--signal);
+      color: var(--signal-text);
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 14px;
+      padding: 11px 22px;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .btn-investigate:hover:not(:disabled) { box-shadow: 0 0 16px rgba(255,180,84,0.4); }
+    .btn-investigate:active:not(:disabled) { transform: translateY(1px); }
+    .btn-investigate:disabled { opacity: 0.6; cursor: progress; }
+    .btn-investigate:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+    .form-error { color: var(--sev-fail); font-size: 13px; margin: 12px 4px 0; }
+
+    /* ── Results ──────────────────────────────────────────────────────── */
+    .results { margin-top: 32px; }
+
+    .empty-state { text-align: center; padding: 64px 20px; color: var(--dim); }
+    .empty-glyph { font-size: 28px; color: var(--signal); margin-bottom: 12px; }
+    .empty-state p { margin: 4px 0; }
+    .empty-sub { font-size: 13px; }
+
+    .api-error {
+      background: rgba(240,85,74,0.08);
+      border: 1px solid rgba(240,85,74,0.35);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+    }
+    .api-error-title { color: var(--sev-fail); font-weight: 600; margin: 0 0 4px; }
+    .api-error-detail { font-family: var(--font-mono); font-size: 13px; color: var(--ink); margin: 0; }
+
+    .summary-strip {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      flex-wrap: wrap;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .summary-item { display: flex; flex-direction: column; }
+    .summary-value { font-family: var(--font-mono); font-size: 20px; font-weight: 600; }
+    .summary-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); }
+    .entity-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      padding: 4px 10px;
+      border-radius: 12px;
+      color: var(--ink);
+    }
+
+    /* ── Timeline ─────────────────────────────────────────────────────── */
+    .timeline { position: relative; padding-left: 26px; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--signal), var(--line) 15%, var(--line) 85%, transparent);
+    }
+    .timeline-entry { position: relative; padding: 14px 0 14px 22px; border-bottom: 1px solid var(--line); }
+    .timeline-entry:last-child { border-bottom: none; }
+    .timeline-entry::before {
+      content: '';
+      position: absolute;
+      left: -26px;
+      top: 20px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--dot-color, var(--dim));
+      box-shadow: 0 0 0 4px var(--void), 0 0 10px var(--dot-glow, transparent);
+    }
+    .entry-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .entry-time { font-family: var(--font-mono); font-size: 13px; color: var(--dim); }
+    .entry-process { font-family: var(--font-mono); font-size: 13px; color: var(--ink); }
+    .entry-badge { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-left: auto; }
+    .entry-message { margin: 6px 0 0; font-size: 14px; color: var(--ink); }
+
+    /* ── Scanning state ───────────────────────────────────────────────── */
+    .timeline.scanning { height: 100px; overflow: hidden; }
+    .scan-beam {
+      position: absolute;
+      left: 1px;
+      width: 12px;
+      height: 60px;
+      background: radial-gradient(circle, var(--signal) 0%, transparent 70%);
+      filter: blur(3px);
+      animation: scan-sweep 1.3s ease-in-out infinite;
+    }
+    @keyframes scan-sweep {
+      0%   { transform: translateY(-20px); opacity: 0; }
+      15%  { opacity: 1; }
+      85%  { opacity: 1; }
+      100% { transform: translateY(120px); opacity: 0; }
+    }
+    .scanning-label { font-family: var(--font-mono); font-size: 13px; color: var(--dim); text-align: center; margin-top: -12px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .scan-beam { animation: none; opacity: 1; top: 40px; }
+      .btn-investigate { transition: none; }
+    }
+
+    @media (max-width: 640px) {
+      .masthead { padding: 16px 20px; }
+      .console { padding: 32px 20px 60px; }
+      .query-form { flex-direction: column; align-items: stretch; }
+      .btn-investigate { width: 100%; }
+      .summary-strip { flex-direction: column; align-items: flex-start; gap: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="masthead">
+    <div class="masthead-wordmark">
+      <span class="wordmark-title">TIMELINE PARSER</span>
+      <span class="wordmark-mark">MARK I</span>
+    </div>
+    <div class="status-indicator">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">CHECKING…</span>
+    </div>
+  </header>
+
+  <main class="console">
+    <p class="console-eyebrow">Give it a lead. Get the sequence.</p>
+
+    <form class="query-form" id="queryForm">
+      <div class="field">
+        <label for="logPath">Log file path</label>
+        <input type="text" id="logPath" placeholder="/var/log/auth.log" autocomplete="off" required />
+      </div>
+      <div class="field field-narrow">
+        <label for="filterKey">Filter by</label>
+        <select id="filterKey">
+          <option value="ip">IP address</option>
+          <option value="user">Username</option>
+          <option value="event">Event type</option>
+        </select>
+      </div>
+      <div class="field field-narrow">
+        <label for="filterValue">Value</label>
+        <input type="text" id="filterValue" placeholder="192.168.1.1" autocomplete="off" required />
+      </div>
+      <button type="submit" class="btn-investigate" id="submitBtn">Investigate</button>
+    </form>
+
+    <p class="form-error" id="formError" hidden></p>
+
+    <section class="results" id="results" aria-live="polite">
+      <div class="empty-state">
+        <div class="empty-glyph">⌁</div>
+        <p>No investigation running.</p>
+        <p class="empty-sub">Provide a lead above to reconstruct the sequence.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const form           = document.getElementById('queryForm');
+      const logPathInput   = document.getElementById('logPath');
+      const filterKeySel   = document.getElementById('filterKey');
+      const filterValInput = document.getElementById('filterValue');
+      const submitBtn      = document.getElementById('submitBtn');
+      const formError      = document.getElementById('formError');
+      const results        = document.getElementById('results');
+      const statusDot       = document.getElementById('statusDot');
+      const statusText      = document.getElementById('statusText');
+
+      const FILTER_LABELS = { ip: 'IP address', user: 'username', event: 'event type' };
+
+      const SEVERITY = {
+        ssh_failed:     { label: 'Failed login',       color: 'var(--sev-fail)',    glow: 'rgba(240,85,74,0.6)' },
+        ssh_success:    { label: 'Successful login',   color: 'var(--sev-success)', glow: 'rgba(95,191,141,0.6)' },
+        sudo_command:   { label: 'Privilege use',      color: 'var(--sev-priv)',    glow: 'rgba(199,146,234,0.6)' },
+        ssh_attempt:    { label: 'Connection attempt', color: 'var(--signal)',      glow: 'rgba(255,180,84,0.6)' },
+        ssh_disconnect: { label: 'Session closed',     color: 'var(--sev-neutral)', glow: 'transparent' },
+        unknown:        { label: 'Unclassified',       color: 'var(--sev-neutral)', glow: 'transparent' }
+      };
+
+      // ── Health check on load ──────────────────────────────────────────
+      fetch('/api/health')
+        .then(function (res) { if (!res.ok) throw new Error(); return res.json(); })
+        .then(function () {
+          statusDot.classList.add('status-ok');
+          statusText.textContent = 'SYSTEM READY';
+        })
+        .catch(function () {
+          statusDot.classList.add('status-down');
+          statusText.textContent = 'BACKEND UNREACHABLE';
+        });
+
+      // ── Helpers ────────────────────────────────────────────────────────
+      function formatDuration(seconds) {
+        if (seconds < 60) return seconds + 's';
+        if (seconds < 3600) return Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        return h + 'h ' + m + 'm';
+      }
+
+      function clearResults() { results.innerHTML = ''; }
+
+      function buildMessage(title, sub) {
+        const wrap = document.createElement('div');
+        wrap.className = 'empty-state';
+        const glyph = document.createElement('div');
+        glyph.className = 'empty-glyph';
+        glyph.textContent = '⌁';
+        const p1 = document.createElement('p');
+        p1.textContent = title;
+        const p2 = document.createElement('p');
+        p2.className = 'empty-sub';
+        p2.textContent = sub;
+        wrap.appendChild(glyph);
+        wrap.appendChild(p1);
+        wrap.appendChild(p2);
+        return wrap;
+      }
+
+      function showScanning() {
+        clearResults();
+        const timeline = document.createElement('div');
+        timeline.className = 'timeline scanning';
+        const beam = document.createElement('div');
+        beam.className = 'scan-beam';
+        timeline.appendChild(beam);
+        const label = document.createElement('p');
+        label.className = 'scanning-label';
+        label.textContent = 'Scanning log file…';
+        results.appendChild(timeline);
+        results.appendChild(label);
+      }
+
+      function showApiError(message) {
+        clearResults();
+        const wrap = document.createElement('div');
+        wrap.className = 'api-error';
+        const title = document.createElement('p');
+        title.className = 'api-error-title';
+        title.textContent = 'Investigation failed';
+        const detail = document.createElement('p');
+        detail.className = 'api-error-detail';
+        detail.textContent = message;
+        wrap.appendChild(title);
+        wrap.appendChild(detail);
+        results.appendChild(wrap);
+      }
+
+      function buildSummaryItem(value, label) {
+        const item = document.createElement('div');
+        item.className = 'summary-item';
+        const val = document.createElement('span');
+        val.className = 'summary-value';
+        val.textContent = value;
+        const lab = document.createElement('span');
+        lab.className = 'summary-label';
+        lab.textContent = label;
+        item.appendChild(val);
+        item.appendChild(lab);
+        return item;
+      }
+
+      function renderTimeline(data) {
+        clearResults();
+
+        const summary = document.createElement('div');
+        summary.className = 'summary-strip';
+        summary.appendChild(buildSummaryItem(data.total_events, 'events'));
+        summary.appendChild(buildSummaryItem(formatDuration(data.duration_seconds), 'span'));
+
+        if (data.entities && data.entities.length) {
+          const chips = document.createElement('div');
+          chips.className = 'entity-chips';
+          data.entities.forEach(function (ent) {
+            const chip = document.createElement('span');
+            chip.className = 'chip';
+            chip.textContent = ent;
+            chips.appendChild(chip);
+          });
+          summary.appendChild(chips);
+        }
+        results.appendChild(summary);
+
+        const timeline = document.createElement('div');
+        timeline.className = 'timeline';
+
+        data.timeline.forEach(function (event) {
+          const sev = SEVERITY[event.event_type] || SEVERITY.unknown;
+
+          const entry = document.createElement('div');
+          entry.className = 'timeline-entry';
+          entry.style.setProperty('--dot-color', sev.color);
+          entry.style.setProperty('--dot-glow', sev.glow);
+
+          const row = document.createElement('div');
+          row.className = 'entry-row';
+
+          const time = document.createElement('span');
+          time.className = 'entry-time';
+          time.textContent = event.timestamp;
+
+          const proc = document.createElement('span');
+          proc.className = 'entry-process';
+          proc.textContent = event.process;
+
+          const badge = document.createElement('span');
+          badge.className = 'entry-badge';
+          badge.style.color = sev.color;
+          badge.textContent = sev.label;
+
+          row.appendChild(time);
+          row.appendChild(proc);
+          row.appendChild(badge);
+
+          const msg = document.createElement('p');
+          msg.className = 'entry-message';
+          msg.textContent = event.message;
+
+          entry.appendChild(row);
+          entry.appendChild(msg);
+          timeline.appendChild(entry);
+        });
+
+        results.appendChild(timeline);
+      }
+
+      // ── Form submission ───────────────────────────────────────────────
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const logPath    = logPathInput.value.trim();
+        const filterKey   = filterKeySel.value;
+        const filterValue = filterValInput.value.trim();
+
+        if (!logPath || !filterValue) {
+          formError.textContent = 'Log path and filter value are both required.';
+          formError.hidden = false;
+          return;
+        }
+        formError.hidden = true;
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Scanning…';
+        showScanning();
+
+        fetch('/api/timeline', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            log_path: logPath,
+            filter_key: filterKey,
+            filter_value: filterValue
+          })
+        })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              return { ok: res.ok, data: data };
+            });
+          })
+          .then(function (result) {
+            if (!result.ok) {
+              showApiError(result.data.error || 'Unknown error.');
+              return;
+            }
+            if (!result.data.timeline || result.data.timeline.length === 0) {
+              clearResults();
+              results.appendChild(buildMessage(
+                'No events matched this filter.',
+                'Try a different ' + (FILTER_LABELS[filterKey] || filterKey) + ', or check "' + filterValue + '" is correct.'
+              ));
+              return;
+            }
+            renderTimeline(result.data);
+          })
+          .catch(function () {
+            showApiError('Could not reach the server. Is it still running?');
+          })
+          .finally(function () {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Investigate';
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

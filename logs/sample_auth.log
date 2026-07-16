@@ -1,0 +1,17 @@
+Jun 16 10:20:55 webserver01 sshd[1122]: Connection from 192.168.1.50 port 51322
+Jun 16 10:21:03 webserver01 sshd[1234]: Failed password for root from 192.168.1.105 port 51344 ssh2
+Jun 16 10:21:05 webserver01 sshd[1234]: Failed password for root from 192.168.1.105 port 51344 ssh2
+Jun 16 10:21:09 webserver01 sshd[1234]: Failed password for root from 192.168.1.105 port 51344 ssh2
+Jun 16 10:21:14 webserver01 sshd[1234]: Failed password for root from 192.168.1.105 port 51344 ssh2
+Jun 16 10:21:20 webserver01 sshd[1256]: Accepted password for root from 192.168.1.105 port 51360 ssh2
+Jun 16 10:21:22 webserver01 sudo[1300]: root : TTY=pts/0 ; PWD=/root ; USER=root ; COMMAND=/bin/bash
+Jun 16 10:21:45 webserver01 sudo[1310]: root : TTY=pts/0 ; PWD=/root ; USER=root ; COMMAND=/usr/bin/cat /etc/shadow
+Jun 16 10:22:10 webserver01 sshd[1256]: Disconnected from 192.168.1.105 port 51360
+Jun 16 10:25:00 webserver01 sshd[1401]: Connection from 192.168.1.77 port 43210
+Jun 16 10:25:03 webserver01 sshd[1401]: Accepted publickey for deploy from 192.168.1.77 port 43210 ssh2
+Jun 16 10:26:40 webserver01 sshd[1401]: Disconnected from 192.168.1.77 port 43210
+Jun 16 11:02:11 webserver01 sshd[1550]: Failed password for admin from 203.0.113.9 port 60022 ssh2
+Jun 16 11:02:14 webserver01 sshd[1550]: Failed password for admin from 203.0.113.9 port 60022 ssh2
+Jun 16 11:02:18 webserver01 sshd[1550]: Disconnected from 203.0.113.9 port 60022
+Jun 16 11:15:00 webserver01 CRON[1600]: (root) CMD (run-parts /etc/cron.hourly)
+Jun 16 11:30:02 webserver01 sshd[1620]: Accepted password for root from 192.168.1.105 port 51900 ssh2
